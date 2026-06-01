@@ -1,3 +1,7 @@
 streamlit
 pandas
 numpy
+pyarrow
+sentence-transformers
+requests
+psutil
