@@ -44,6 +44,10 @@ URL_BASE = (
     "https://fgvbr-my.sharepoint.com/:u:/g/personal/"
     "guilherme_valentim_fgv_br/IQCNUgevEloURb4Rfw16buLcAS5JrufrNu9iNwQwX0GbEuk?e=W6NcyE"
 )
+URL_PLANOS = (
+    "https://fgvbr-my.sharepoint.com/:u:/g/personal/"
+    "guilherme_valentim_fgv_br/IQDj660hS9S2RKIdh0dNM9BnAUy4M7kouAcwe_N7D9CD2TM?e=lQVVec"
+)
 NOME_MODELO = "paraphrase-multilingual-MiniLM-L12-v2"
 LIMITE_MB = 1024  # limite de RAM do Streamlit Community Cloud
 
@@ -221,35 +225,44 @@ st.markdown(APP_CSS, unsafe_allow_html=True)
 # ---------------------------------------------------------------------------
 # Carregamento de dados e modelo (com cache)
 # ---------------------------------------------------------------------------
-@st.cache_data(show_spinner="Carregando base vetorizada…")
-def carregar_base(url: str) -> pd.DataFrame:
-    """Lê o parquet com a base vetorizada: arquivo local se existir, senão URL."""
-    if ARQUIVO_BASE.exists():
-        df = pd.read_parquet(ARQUIVO_BASE)
+def _ler_parquet(arquivo: Path, url: str) -> pd.DataFrame:
+    """Lê um parquet: usa o arquivo local se existir, senão baixa da URL.
+
+    Para links do OneDrive/SharePoint, força o download direto (?download=1).
+    """
+    if arquivo.exists():
+        return pd.read_parquet(arquivo)
+
+    if "1drv.ms" in url or "sharepoint.com" in url or "onedrive.live.com" in url:
+        direct_url = url.replace("?e=", "?download=1&e=")
+        if "download=1" not in direct_url:
+            separador = "&" if "?" in direct_url else "?"
+            direct_url = f"{direct_url}{separador}download=1"
     else:
-        if "1drv.ms" in url or "sharepoint.com" in url or "onedrive.live.com" in url:
-            # Forçar download direto no OneDrive/SharePoint
-            direct_url = url.replace("?e=", "?download=1&e=")
-            if "download=1" not in direct_url:
-                separador = "&" if "?" in direct_url else "?"
-                direct_url = f"{direct_url}{separador}download=1"
-        else:
-            direct_url = url
-        resposta = requests.get(
-            direct_url, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True
-        )
-        resposta.raise_for_status()
-        df = pd.read_parquet(BytesIO(resposta.content))
+        direct_url = url
+
+    resposta = requests.get(
+        direct_url, headers={"User-Agent": "Mozilla/5.0"}, allow_redirects=True
+    )
+    resposta.raise_for_status()
+    return pd.read_parquet(BytesIO(resposta.content))
+
+
+@st.cache_data(show_spinner="Carregando base vetorizada…")
+def carregar_base(url: str = URL_BASE) -> pd.DataFrame:
+    """Lê o parquet com a base vetorizada (parágrafos + embeddings)."""
+    df = _ler_parquet(ARQUIVO_BASE, url)
     # A coluna `erro` é toda nula nessa base — descarta para economizar espaço.
     return df.drop(columns=["erro"], errors="ignore")
 
 
 @st.cache_data(show_spinner="Carregando planos municipais…")
-def carregar_planos() -> pd.DataFrame | None:
-    """Lê o parquet com o texto integral dos PMPIs (se disponível localmente)."""
-    if not ARQUIVO_PLANOS.exists():
+def carregar_planos(url: str = URL_PLANOS) -> pd.DataFrame | None:
+    """Lê o parquet com o texto integral dos PMPIs (local ou via URL)."""
+    try:
+        df = _ler_parquet(ARQUIVO_PLANOS, url)
+    except Exception:  # noqa: BLE001 — sem os planos, o leitor apenas fica indisponível
         return None
-    df = pd.read_parquet(ARQUIVO_PLANOS)
     df["municipio"] = df["municipio"].astype(str).str.strip()
     df["tem_texto"] = df["texto_pdf"].fillna("").str.strip().str.len() > 0
     return df.sort_values("municipio").reset_index(drop=True)
@@ -1078,8 +1091,8 @@ def pagina_leitor() -> None:
     planos = carregar_planos()
     if planos is None:
         st.warning(
-            f"Arquivo `{ARQUIVO_PLANOS.name}` não encontrado na pasta do app. "
-            "Coloque-o junto ao `app3.py` para habilitar o leitor."
+            f"Não foi possível carregar `{ARQUIVO_PLANOS.name}`. Coloque o arquivo "
+            "junto ao `app3.py` ou verifique o link de acesso (`URL_PLANOS`)."
         )
         return
 
