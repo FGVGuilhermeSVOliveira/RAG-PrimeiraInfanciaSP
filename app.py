@@ -42,11 +42,11 @@ ARQUIVO_BASE = PASTA / "nurturing_care_PMPI (28-05-2026).pqt"
 ARQUIVO_PLANOS = PASTA / "PMPI SP (02-06-2026).pqt"
 URL_BASE = (
     "https://fgvbr-my.sharepoint.com/:u:/g/personal/"
-    "guilherme_valentim_fgv_br/IQCNUgevEloURb4Rfw16buLcAS5JrufrNu9iNwQwX0GbEuk?e=W6NcyE"
+    "guilherme_valentim_fgv_br/IQBs0vQ86IoLSpJEwcpsar9xATrtRza1i5M6npJct1Z9rLc?e=5a6Fbk"
 )
 URL_PLANOS = (
     "https://fgvbr-my.sharepoint.com/:u:/g/personal/"
-    "guilherme_valentim_fgv_br/IQDj660hS9S2RKIdh0dNM9BnAUy4M7kouAcwe_N7D9CD2TM?e=lQVVec"
+    "guilherme_valentim_fgv_br/IQBs0vQ86IoLSpJEwcpsar9xATrtRza1i5M6npJct1Z9rLc?e=5a6Fbk"
 )
 NOME_MODELO = "paraphrase-multilingual-MiniLM-L12-v2"
 LIMITE_MB = 1024  # limite de RAM do Streamlit Community Cloud
